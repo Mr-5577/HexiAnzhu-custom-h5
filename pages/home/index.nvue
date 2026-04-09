@@ -1,0 +1,923 @@
+<template>
+	<view class="justify-center align-center">
+		<view class="uni-content">
+			<view class="search">
+				<view class="search-project">
+					<scroll-view scroll-x="true" class="nav" scroll-with-animation :scroll-left="scrollLeft">
+						<view class="cu-item header-item cu-btn" :class="TabCur == -1 ? ' bg-blue  round' : 'bg-gray round text-gray'" @click="checkAll">全部项目</view>
+						<view class="cu-item header-item cu-btn bg-blue  round" v-for="(item, index) in ChooseProject" :key="index" :data-id="index">{{ item.p_name }}</view>
+					</scroll-view>
+				</view>
+				<view class="action" @click="chooseProject"><text class=" line-blue cuIcon-more"></text></view>
+			</view>
+			<view class="bg-white shadow-warp padding margin-sm margin-top radius">
+				<view class=" padding text-center flex  justify-between " >
+					<view class="padding" style="width: 25%;padding: 6px;" v-for="(item, indexs) in datas" :key="indexs + 1">
+						<view class="text-bold text-black text-lg padding">{{ item.num }}</view>
+						<view class=" text-gray padding">{{ item.title }}</view>
+					</view>
+				</view>
+			</view>
+			<!-- 重要事项提醒 -->
+			<template>
+				<view class="padding-left-sm text-bold margin-top">重要事项提醒</view>
+				<view class="radius margin-sm" style="margin-top: 0;margin-bottom: 0;">
+					<view class=" margin-bottom text-center flex justify-between flex-wrap" style="flex-direction: row;">
+						<view class="shadow-warp card" v-for="(item, indexs) in important" :key="indexs + 3" @click="nav(item)">
+							<view class="padding-left padding-top flex justify-between uni-cell-100">
+								<view class="text-bold text-xxl text-blue">{{ item.num }}</view>
+								<view class=" flex uni-cell-40 justify-center">
+									<image v-if="indexs == 0" src="/static/images/home/wfp.png" mode="aspectFit"></image>
+									<image v-if="indexs == 1" src="/static/images/home/gc.png" mode="aspectFit"></image>
+									<image v-if="indexs == 2" src="/static/images/home/yq.png" mode="aspectFit"></image>
+									<image v-if="indexs == 3" src="/static/images/home/wgj.png" mode="aspectFit"></image>
+								</view>
+							</view>
+							<view class="margin-left text-sm flex text-gray padding-top-sm">{{ item.title }}</view>
+							<view class="margin-left flex text-sm text-grey padding-top-sm" style="line-height: 34rpx;">
+								<text>查看详情</text>
+								<text class="padding-left-xs cuIcon-right"></text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</template>
+			
+			<!-- 待完善接待客户 -->
+			<template v-if="false">
+				<navigator url="/pages/customer/notperfect_reception_customter/notperfect_reception_customter" class="margin-sm deal-custom">
+					<view class="content">
+						<view class=" flex" style="line-height: 32px;">
+							<text class="text-blue cuIcon-form padding-right-xs" style="font-size: 36rpx;"></text>
+							<text class="text-15">待完善接待记录</text>
+						</view>
+						<view class="uni-cell-30 flex justify-end" style="color:rgba(77,151,255,0.5)">
+							<view class="text-sm">
+								<view>点击进入</view>
+								<view>客户列表</view>
+							</view>
+							<text class="cuIcon-right padding-left-xs" style="line-height: 32px;font-size: 30rpx;"></text>
+						</view>
+					</view>
+				</navigator>
+			</template>
+			
+			<!-- 项目分析选项 -->
+			<template>
+				<view class="padding-left-sm text-bold margin-top">客户分析</view>
+				<view class="search">
+					<view class="margin-left-sm search-project">
+						<scroll-view scroll-x class="nav" scroll-with-animation :scroll-left="scrollLeft">
+							<view class="cu-item header-item cu-btn bg-blue round" v-for="(item, index) in checkedAnalysis" :key="index" :data-id="index">{{ item.name }}</view>
+						</scroll-view>
+					</view>
+					<view class="action text-blue flex flex-direction" style="width: 100rpx;" @click="showMask(1)">
+						<text>更多</text>
+						<text class="cuIcon-triangledownfill"></text>
+					</view>
+				</view>
+			</template>
+			
+			<!-- 单项目 数据分析 图表 -->
+			<template>
+				<view class="bg-white padding-sm margin-top-sm" v-for="(item, index) in singleCharts" :key="index">
+					<view class="flex justify-between">
+						<view class="flex">
+							<image src="/static/images/home/m.png" class="echarts-icon" mode="aspectFit"></image>
+							<text style="padding: 14rpx;" class="text-bold text-black">{{ item.title }}</text>
+						</view>
+						<view class="text-center" @tap="toggleTabs('range', index + 1, item)">
+							<image src="/static/images/home/calendar.png" class="echarts-calendar" mode="aspectFit"></image>
+							<text class="text-xs text-blue">日期</text>
+						</view>
+					</view>
+					<view class="flex padding justify-center ">
+						<text
+							class="margin-lg"
+							v-for="(it, idx) in item.times"
+							:key="idx"
+							@click="changeTimeSingle(it, idx, index + 1, item)"
+							:class="{ 'text-blue border-bottom': it.active }"
+						>
+							{{ it.name }}
+						</text>
+					</view>
+					
+					<view :id="'echarts' + (index + 1)" :class="item.temps.length > 10 ? 'echarts3' : 'echarts'"></view>
+				</view>
+			</template>
+		</view>
+		<!-- 添加客户btn -->
+		<view class="right-btn" @click="addCustomer"><image src="/static/images/home/add-custom.png"></image></view>
+		<!-- 筛选时间 -->
+		<w-picker mode="range" startDate="2017" endYear="2030" :defaultVal="rangeDval" :current="false" @confirm="onConfirm" ref="range"></w-picker>
+		<!-- 筛选项目 -->
+		<li-choose ref="lichoose" :showCustomer="showCustomer" :isAllChoose="isAllChoose" @confirm="confirms"></li-choose>
+		<!-- 筛选项目分析选项 -->
+		<li-mask ref="limask" :items="checkbox" :types="types" @comfirm="confirmMask"></li-mask>
+	</view>
+</template>
+
+<script>
+import uCharts from '@/components/u-charts/u-charts.js';
+import wPicker from '@/components/w-picker/w-picker.vue';
+import liChoose from '@/components/li-choose/li-choose.vue';
+import liMask from '@/components/li-mask/li-mask.vue';
+import { isJSON } from '@/common/checker.js';
+var echarts = require('echarts');
+var _self;
+var canvaPie = null; //到访来源 canvas
+var canvaPie1 = null; //客户意向分析 canvas
+var canvaColumn = null; //首次到访 canvas
+
+export default {
+	components: {
+		wPicker,
+		liChoose,
+		liMask
+	},
+	data() {
+		return {
+			chartstitleData: [{ name: '昨天', active: false }, { name: '今天', active: true }, { name: '明天', active: false }],
+			singleCharts: [], //单项目图标
+			types: 'single', //选择类型 'single','more'
+			mode: false,
+			showHome: false,
+			isAllChoose: false, //是否已经全选
+			isSingle: true,
+			modalName: null,
+			showCustomer: true,
+			checkbox: [],
+			times: [{ name: '今日', id: 1, active: false }, { name: '本周', id: 2, active: false }, { name: '本月', id: 3, active: false }],
+			activeIndex: 0,
+			activeIndex1: 0,
+			activeIndex2: 0,
+			important: [
+				// { title: '小程序在线客户', url: 'customer/undistributed/undistributed_customer', num: 0 },
+				{ title: '小程序在线客户', url: '', num: 0 },
+				{ title: '即将进入公池的客户', url: '', num: 0 },
+				{ title: '逾期未付款的客户', url: 'customer/overdue_customer/overdue_customer', num: 0 },
+				{ title: '3天以上未跟进的客户', url: 'customer/customer', num: 0 }
+			],
+			items: [],
+			scrollLeft: 0,
+			TabCur: -2,
+			mask: false,
+			mask1: false,
+			datas: [{ title: '客户总计', num: '0' }, { title: '今日首访', num: '0' }, { title: '今日再访', num: '0' }, { title: '今日成交', num: '0' }],
+			cWidth: '',
+			cHeight: '',
+			pixelRatio: 1,
+			textarea: '',
+			rangeDval: ['2019-10-30', '2020-02-31'],
+			cWidth2: '', //横屏图表
+			cHeight2: '', //横屏图表
+			allProject: [], //全部项目
+			type: 3, // 客户归属(1-我负责的，2-共享给我的，3-我管理的)
+			pid: '', //项目id(多个项目id用“，”隔开)
+			singleProject: true, //单项目时
+			singleTemp: '', //单项目模板
+			custom_type: '', //单项目模板id
+			firstUchart: false, //首次到访图表显示
+			moreUchart: false, //客户跟进  意向房型分析
+			totalUchart: false, //客户总数 到访来源分析
+			checkType: 3, //当前多项目图表 当前是谁点击了按钮
+			start_time: '',
+			end_time: '',
+			time_type: 1,
+			time_type_index: 0,
+			singleIndex: 1,
+			default_pname: '',
+			ChooseProject: [],
+			checkboxMore: '',
+			checkedAnalysis: [], //筛选客户分析
+			option: ''
+		};
+	},
+	onLoad() {
+		_self = this;
+		this.cWidth = uni.upx2px(750);
+		this.cHeight = uni.upx2px(500);
+		this.cWidth2 = uni.upx2px(700);
+		this.cHeight2 = uni.upx2px(1100);
+		//根据权限获取大区和大区下的项目
+		this.getBigareacustomapi();
+	},
+	onShow() {
+		uni.showTabBar({});
+		const dap = this.$store.state.defaultActiveProject;
+		//是否有默认项目
+		if (dap.length == 0) {
+			this.getUser();
+		}
+		if (this.ChooseProject != dap) {
+			let pids = [];
+			dap.forEach(res => {
+				pids.push(res.p_id);
+			});
+			this.pid = this.$tools.toStrings(pids);
+			this.ChooseProject = dap;
+			this.getProjectTemplate();
+			if (dap.length != 1) {
+				//多项目
+				let AP = [];
+				this.allProject.forEach(res => {
+					res.project.forEach(resp => {
+						AP.push(resp);
+					});
+				});
+				//当所有项目和所选项目相等时
+				if (AP.length == dap.length) {
+					this.TabCur = -1;
+					this.isAllChoose = true;
+				} else {
+					this.allProject.forEach(res => {
+						res.project.forEach(resp => {
+							dap.forEach(p => {
+								if (resp.p_id == p) {
+									this.ChooseProject.push(resp);
+								}
+							});
+						});
+					});
+					this.isAllChoose = false;
+					this.TabCur = -3;
+				}
+				//获取客户统计数据
+				this.getcustomstatisticcustomapi();
+				//重要事项提醒
+				this.getcustomremindcustomapi();
+				//首次到访分析（多项目）
+				// this.singleCharts = [];
+			} else {
+				this.scrollLeft = 0;
+				this.TabCur = -2;
+				//获取客户统计数据
+				this.getcustomstatisticcustomapi();
+				//重要事项提醒
+				this.getcustomremindcustomapi();
+			}
+		}
+	},
+	computed: {
+		defaultActiveCustomType() {
+			this.type = this.$store.state.defaultActiveCustom;
+			return this.$store.state.defaultActiveCustom;
+		}
+	},
+	methods: {
+		//获取项目模板
+		getJtTemplate() {
+			let data = {
+				pid: 0,
+				type: 1 //1：录入客户模板；2：跟进客户模板
+			};
+			uni.showLoading({
+				title: '正在加载数据...'
+			});
+			this.$api.customGetprojecttemplatecustomapi(data).then(res => {
+				this.JttemplateList = [];
+				for (let var1 in res.data) {
+					let temp = {
+						name: res.data[var1].title,
+						list: [],
+						key: var1,
+						idIndex: 0,
+						empty: res.data[var1].empty, ////是否必选（1-非必选，2-必选）
+						type: res.data[var1].type, //0 select 单选  1 check-box  复选 2 radio单选
+						enable: res.data[var1].enable //是否启用（1-启用，2-禁用）
+					};
+					res.data[var1].option_data.forEach(res => {
+						let datas = {
+							name: res,
+							active: false
+						};
+						temp.list.push(datas);
+					});
+					this.JttemplateList.push(temp);
+				}
+			});
+		},
+		//选择年与日 筛选
+		async changeTimeSingle(item, index, indexs, items) {
+			items.times.forEach(res => {
+				res.active = false;
+			});
+			item.active = !item.active;
+			let time;
+			items.times.forEach(res => {
+				if(res.active == true){
+					time = res.name;
+				}
+			});
+			this.time_type_index = index;
+			this.time_type = index + 1;
+			this.singleIndex = indexs;
+			if (items.value) {
+				this.custom_type = items.value;
+			}
+			this.$forceUpdate();
+			//获取此项目数据
+			var temps = await this.getCustomtypecustomapi();
+			// 更新数据
+			this.initEcharts(this.singleIndex, temps,time);
+		},
+		// 选择时间范围
+		toggleTabs(str, num, items) {
+			if (items.value) {
+				this.custom_type = items.value;
+			}
+			this.singleIndex = num;
+			this.time_type = 4;
+			this.$refs[str].show();
+		},
+		// 选择项目分析选项
+		async confirmMask(data) {
+			let items = data.item;
+			this.checkbox = items;
+			this.$forceUpdate();
+			this.singleCharts = [];
+			this.checkedAnalysis = [];
+			let dfTemps = [];
+			let temps = [];
+			if (data.types == 'single') {
+				var i = 0;
+				for (let var1 in items) {
+					if (items[var1].checked == true) {
+						++i;
+						let data = {
+							value: items[var1].value,
+							title: items[var1].name,
+							times: [{ name: '今日', id: 1, active: true }, { name: '本周', id: 2, active: false }, { name: '本月', id: 3, active: false }]
+						};
+						this.custom_type = items[var1].value;
+						this.singleIndex = i;
+						dfTemps.push(items[var1]);
+						data.temps = await this.getCustomtypecustomapi();
+						this.singleCharts.push(data);
+					}
+				}
+			}
+			let time;
+			if (this.singleCharts.length != 0) {
+				for (let i = 0; i < this.singleCharts.length; i++) {
+					this.singleCharts[i].times.map(res =>{
+						if(res.active == true){
+							time = res.name
+						}
+					})
+					setTimeout(() =>{
+						this.initEcharts(i + 1, this.singleCharts[i].temps,time);
+					},1000)
+				}
+			}
+			this.checkedAnalysis = dfTemps;
+		},
+		hideModal() {},
+		nav(item) {
+			let _this = this;
+			if (item.url) {
+				uni.navigateTo({
+					url: '/pages/' + item.url
+				});
+				if (item.url == 'customer/customer') {
+					_this.$store.commit('setRecord', '3');
+					uni.navigateTo({
+						url: '/pages/customer/nofollow_customer/nofollow_customer?record=3'
+					});
+				}
+			}
+		},
+		//项目筛选
+		async confirms(data) {
+			if (data.pid.length == 0) {
+				this.getUser();
+			}else{
+				this.TabCur = -3;
+				if (data.p_name) {
+					this.default_pname = data.p_name;
+				}
+				this.type = data.type;
+				if (data.pid.length != 0) {
+					this.ChooseProject = [];
+					this.pid = this.$tools.toStrings(data.pid);
+					let AP = [];
+					this.allProject.forEach(res => {
+						res.project.forEach(resp => {
+							AP.push(resp);
+						});
+					});
+					this.time_type = 1;
+					this.activeIndex = 0;
+					//当所有项目和所选项目相等时
+					if (AP.length == data.pid.length) {
+						this.TabCur = -1;
+						this.isAllChoose = true;
+						this.ChooseProject = AP;
+					} else {
+						this.allProject.forEach(res => {
+							res.project.forEach(resp => {
+								data.pid.forEach(p => {
+									if (resp.p_id == p) {
+										this.ChooseProject.push(resp);
+									}
+								});
+							});
+						});
+						this.isAllChoose = false;
+						this.TabCur = -3;
+					}
+					this.getProjectTemplate();
+					//获取客户统计数据
+					this.getcustomstatisticcustomapi();
+					//重要事项提醒
+					this.getcustomremindcustomapi();
+					this.$store.commit('setDefaultActiveProject', this.ChooseProject);
+				}
+			}
+		},
+		// 打开筛选项目分析弹出层
+		showMask(index) {
+			if (index == 1) {
+				if (this.singleProject) {
+					this.$refs.limask.show();
+				}
+			}
+		},
+		//选择时间范围
+		async onConfirm(val) {
+			
+			let time ;
+			time = val.from.substring(5,10)+' 至 '+val.to.substring(5,10),
+			this.start_time = this.$tools.timeToTimeStamp(val.from);
+			this.end_time = this.$tools.timeToTimeStamp(val.to);
+			let temp = await this.getCustomtypecustomapi();
+			this.initEcharts(this.singleIndex, temp,time);
+		},
+		chooseProject() {
+			this.$store.commit('setDefaultActiveProject', this.ChooseProject);
+			this.$refs.lichoose.show();
+		},
+		//录入客户
+		addCustomer() {
+			uni.navigateTo({
+				url: '/pages/customer/customer_add'
+			});
+		},
+		getUser() {
+			this.$api.Getuserinfobookingapi({}).then(res => {
+				
+				if (res.code == 1000) {
+					this.ChooseProject = [];
+					this.$store.commit('setDefaultPid', res.data.default_pid);
+					this.pid = res.data.default_pid;
+					this.default_pname = res.data.default_pname;
+					let data = { p_id: res.data.default_pid, p_name: res.data.default_pname, isactive: true };
+					this.ChooseProject.push(data);
+					this.$store.commit('setDefaultActiveProject', this.ChooseProject);
+					this.scrollLeft = 0;
+					this.TabCur = -2;
+					this.singleProject = true;
+					//获取客户统计数据
+					this.getcustomstatisticcustomapi();
+					//重要事项提醒
+					this.getcustomremindcustomapi();
+					this.getProjectTemplate();
+				}
+			});
+		},
+		//获取客户统计数据
+		getcustomstatisticcustomapi() {
+			let data = {
+				pid: this.pid,
+				type: this.type
+			};
+			uni.showLoading({
+				title: '正在加载数据...'
+			});
+			this.$api.customGetcustomstatisticcustomapi(data, res => {
+				this.datas[0].num = res.data.total;
+				this.datas[1].num = res.data.insert;
+				this.datas[2].num = res.data.visit;
+				this.datas[3].num = res.data.deal;
+			});
+		},
+		//重要事项提醒
+		getcustomremindcustomapi() {
+			let data = {
+				pid: this.pid,
+				type: this.type
+			};
+			uni.showLoading({
+				title: '正在加载数据...'
+			});
+			this.$api.customGetcustomremindcustomapi(data, res => {
+				this.important[1].num = res.data.pool;
+				if (res.data.unpaid == 1000) {
+					this.important[2].num = '1000+';
+				} else {
+					this.important[2].num = res.data.unpaid;
+				}
+				this.important[3].num = res.data.record;
+			});
+		},
+		// 获取模板数据
+		getTemplate() {
+			return new Promise((resolve, reject) => {
+				let data = {
+					pid: 0,
+					type: this.type
+				};
+				this.$api.customGetprojecttemplatecustomapi(data).then( res => {
+					let temp = [];
+					if (res.code == 1000) {
+						if (res.data.length != 0) {
+							for (let var1 in res.data) {
+								let data = {
+									value: res.data[var1].inputname,
+									name: res.data[var1].title
+								};
+								if (res.data[var1].default == 1) {
+									data.checked = true;
+								} else {
+									data.checked = false;
+								}
+								temp.push(data);
+							}
+							this.checkbox = temp;
+
+							let ctids = [];
+							let jtTemps = [];
+							this.checkbox.forEach(res => {
+								if (res.checked == true) {
+									ctids.push(res.value);
+									jtTemps.push(res);
+								}
+							});
+							this.custom_type = this.$tools.toStrings(ctids);
+							this.singleIndex = 1;
+							resolve(jtTemps);
+						}
+					}
+				});
+			});
+		},
+		// 获取集团模板接口
+		async getProjectTemplate() {
+			let dfTemps = await this.getTemplate();
+			this.checkedAnalysis = dfTemps;
+			this.singleCharts = [];
+			let i = 0;
+			for (let var1 in dfTemps) {
+				if (dfTemps[var1].checked == true) {
+					++i;
+					let data = {
+						value: dfTemps[var1].value,
+						title: dfTemps[var1].name,
+						times: [{ name: '今日', id: 1, active: true }, { name: '本周', id: 2, active: false }, { name: '本月', id: 3, active: false }]
+					};
+					this.custom_type = dfTemps[var1].value;
+					data.temps = await this.getCustomtypecustomapi();
+					this.singleCharts.push(data);
+				}
+			}
+			if (this.singleCharts.length != 0) {
+				let time;
+				for (let i = 0; i < this.singleCharts.length; i++) {
+					this.singleCharts[i].times.map(res =>{
+						if(res.active == true){
+							time = res.name
+						}
+					})
+					setTimeout(() =>{
+						this.initEcharts(i + 1, this.singleCharts[i].temps,time);
+					},1000)
+				}
+			}
+		},
+		//项目模板类型分析（单项目）
+		getCustomtypecustomapi() {
+			return new Promise((resolve, reject) => {
+				let data = {
+					pid: this.pid,
+					type: this.type,
+					custom_type: this.custom_type,
+					time_type: this.time_type,
+					start_time: this.start_time,
+					end_time: this.end_time
+				};
+				this.$api.customCustomtypecustomapi(data, res => {
+					let temps = [];
+					res.data.forEach(resp => {
+						let data = {
+							value: resp.total,
+							name: resp.name
+						};
+						temps.push(data);
+					});
+					resolve(temps);
+				});
+			});
+		},
+
+		//选择全部项目
+		async checkAll() {
+			this.TabCur = -1;
+			let datas = [];
+			this.ChooseProject = [];
+			this.allProject.forEach(res => {
+				res.project.forEach(resp => {
+					datas.push(resp.p_id);
+					this.ChooseProject.push(resp);
+				});
+			});
+			this.$store.commit('setDefaultActiveProject', this.ChooseProject);
+			this.isAllChoose = true;
+			this.pid = this.$tools.toStrings(datas);
+			//获取客户统计数据
+			this.getcustomstatisticcustomapi();
+			//重要事项提醒
+			this.getcustomremindcustomapi();
+			//到访来源分析(单项目)
+			if (datas.length == 1) {
+				this.singleProject = true;
+				this.types = 'single';
+				this.getProjectTemplate(1);
+			}
+		},
+		//根据权限获取大区和大区下的项目
+		getBigareacustomapi() {
+			this.$api.customGetbigareacustomapi({}, res => {
+				if (res.code == 1000) {
+					if (res.data.length != 0) {
+						this.allProject = res.data;
+						res.data.forEach(res => {
+							res.project.forEach(resp => {
+								resp.isactive = false;
+							});
+						});
+						this.$store.commit('setSearchPro', res.data);
+						this.showHome = true;
+					}
+				}
+			});
+		},
+		initEcharts(index,data,time) {
+			 let echartsID = 'echarts'+index;
+			 let myChart = echarts.init(document.getElementById(echartsID));
+			 var option = {
+				 backgroundColor: '#fff',
+					tooltip: {
+						trigger: 'item',
+						formatter: "{a} <br/>{b}: {c} ({d}%)"
+					},
+					title: {
+						text: time,
+						y: '35%',
+						x: 'center',
+						textStyle: {
+						  color: '#000',
+						  fontSize: 12
+						}
+					},
+					grid: {
+						left: '3%',
+						right: '4%',
+						bottom: '3%',
+						containLabel: true
+					},
+					legend: {
+						top: '80%',
+						x:'center',
+						icon: "circle",
+						data: data,
+						textStyle:{
+							padding:[1,1,1,1]
+						},
+		
+					},
+					series: {
+						name: '访问来源',
+						type: 'pie',
+						radius: ['40%', '50%'],
+						top:'-18%',
+						center: ['50%', '50%'],
+						avoidLabelOverlap: false,
+						color: this.color,
+						itemStyle:{
+							shadowColor: 'rgba(0, 0, 0, 0.3)',
+							shadowBlur: 10
+						} ,
+						label: {
+							formatter: '{b|{b}：}{c}%  ',
+								rich: {
+									b: {
+											fontSize: 10,
+											lineHeight: 33
+										}
+									}
+						},
+						data: data
+					}
+			 };
+			 if(data.length > 10){
+				option.series.radius = ['26%', '33%'];
+				option.series.top = '-50%';
+				option.legend.top =  '55%';
+				option.title.y = '23%';
+			 }
+			 myChart.setOption(option);
+		}
+	}
+};
+</script>
+
+<script module="echarts" lang="renderjs">
+
+export default {
+	data(){
+		return{
+			color : ['#4D97FF', '#FCBB22', '#52C76C', '#797FF5', '#D2DE18', '#029355', '#7ED4F4', '#FC7E14', '#81C346', '#4ADED7', '#F3B0AB', '#01A46F', '#1DA8ED', '#F0DD8D', '#0083B7', '#1E2E97', '#FF6373', '#049C9D', '#7C63FF'],
+			singleCharts:[]
+		}
+	},
+	mounted() {
+	},
+	methods: {
+		
+		// updateEcharts(newValue, oldValue, ownerInstance, instance) {
+		// 	// 监听 service 层数据变更
+		// 	myChart.setOption(newValue)
+		// },
+		// onClick(event, ownerInstance) {
+		// 	// 调用 service 层的方法
+		// 	ownerInstance.callMethod('onViewClick', {
+		// 		test: 'test'
+		// 	})
+		// }
+	}
+}
+</script>
+
+<style lang="less" scoped>
+page {
+	background-color: rgb(250, 250, 250);
+	.deal-custom{
+		height: 140rpx;
+		margin-top: 0;
+		background: linear-gradient(to right,rgb(255,255,255),rgb(220,235,255));
+		padding: 20rpx;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: row;
+		border-radius: 10rpx;
+		.content{
+			display: flex;
+			justify-content: space-between;
+			flex-direction: row;
+			width: 98%;
+		}
+	}
+	.echarts-icon {
+		height: 24rpx;
+		width: 42rpx;
+		margin-top: 20rpx;
+	}
+	.echarts-calendar {
+		height: 40rpx;
+		width: 40rpx;
+	}
+	.flex {
+		display: flex;
+		flex-direction: row;
+	}
+	.card {
+		width: 340rpx;
+		height: 224rpx;
+		border-radius: 10rpx;
+		margin-top: 20rpx;
+		background-color: rgb(255, 255, 255);
+		image {
+			height: 58rpx;
+			width: 58rpx;
+		}
+	}
+	.border-bottom {
+		border-bottom: 1px solid currentColor;
+	}
+	.echarts {
+		width: 100%;
+		height: 230px;
+		padding-top: 20rpx;
+	}
+	.echarts3 {
+		margin-top: 20px;
+		width: 100%;
+		height: 360px;
+	}
+}
+.line-blue {
+	background-color: rgba(77, 151, 255, 0.1);
+	border: 1rpx solid rgba(77, 151, 255, 0.5);
+}
+.search {
+	justify-content: space-between;
+	flex-direction: row;
+	.search-project {
+		margin: none;
+		height: 90rpx;
+		width: 630rpx;
+		padding-top: 10px;
+		margin-left: 24rpx;
+	}
+	.action {
+		justify-content: center;
+		align-items: center;
+		width: 10%;
+	}
+	.bg-gray {
+		background-color: rgba(235, 235, 235);
+	}
+}
+.header-item {
+	height: 60rpx;
+	line-height: 62rpx;
+}
+.cuIcon-more {
+	border-radius: 50%;
+	border: 1px solid #007aff;
+	width: 50rpx;
+	height: 50rpx;
+	text-align: center;
+	line-height: 50rpx;
+}
+.mask {
+	position: absolute;
+	border: 1px solid #ddd;
+	border-radius: 10rpx;
+	top: 70rpx;
+	width: 200rpx;
+	padding: 5rpx;
+	z-index: 999;
+	background: #fff;
+}
+.charts {
+	width: 100%;
+	height: 500rpx;
+}
+.uni-flex-center {
+	background: #ffffff;
+}
+.selects {
+	height: 60rpx;
+	border-radius: 10rpx;
+	line-height: 50rpx;
+	border: 1rpx solid #8799a3;
+	padding: 5rpx;
+}
+.border-blue {
+	border: 1px solid #007aff;
+	color: #007aff;
+}
+.cu-bar {
+	border-bottom: 1px solid rgba(230, 230, 230, 1);
+}
+.padding {
+	padding: 10rpx;
+}
+
+/*样式的width和height一定要与定义的cWidth和cHeight相对应*/
+.qiun-charts-rotate {
+	width: 700rpx;
+	height: 1100rpx;
+	background-color: #ffffff;
+	padding: 25rpx;
+}
+
+.charts-rotate {
+	width: 700rpx;
+	height: 1100rpx;
+	background-color: #ffffff;
+}
+.right-btn {
+	border-radius: 50%;
+	position: fixed;
+	right: 10px;
+	bottom: 120px;
+	text-align: center;
+	background-color: rgba(255, 254, 254, 1);
+	box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0);
+	color: rgba(16, 16, 16, 1);
+	height: 88rpx;
+	width: 88rpx;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	image {
+		height: 38rpx;
+		width: 34rpx;
+	}
+}
+</style>

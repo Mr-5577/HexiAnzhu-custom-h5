@@ -1,0 +1,9 @@
+.border-bottom{
+  border-bottom: 1px solid #eee;
+}
+.border-bottom-dash{
+	 border-bottom: 1px dashed #eee;
+}
+.border{
+	border: 1upx solid #eee;
+}

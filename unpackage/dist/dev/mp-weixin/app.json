@@ -1,0 +1,62 @@
+{
+  "pages": [
+    "pages/subscribe/subscribe",
+    "pages/home/home",
+    "pages/customer/customer_add",
+    "pages/subscribe/success",
+    "pages/search/customer_search",
+    "pages/user/index",
+    "pages/customer/customer",
+    "pages/customer/overdue_customer",
+    "pages/customer/overdue_customer_detail",
+    "pages/customer/customer_detail",
+    "pages/customer/stay_perfect_customer",
+    "pages/search/search",
+    "pages/housing/housing",
+    "pages/order/order",
+    "pages/order/traded_order",
+    "pages/order/traded_order_detail",
+    "pages/order/detail",
+    "pages/customer/customer_update",
+    "pages/change-tower/change-tower"
+  ],
+  "subPackages": [],
+  "window": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "客户管理",
+    "navigationBarBackgroundColor": "#5076B5",
+    "backgroundColor": "#5076B5"
+  },
+  "tabBar": {
+    "color": "#8a8a8a",
+    "backgroundColor": "#F8F8F8",
+    "selectedColor": "#5076B5",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "static/images/tabbar/home.png",
+        "selectedIconPath": "static/images/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/customer/customer",
+        "text": "客户",
+        "iconPath": "static/images/tabbar/customer.png",
+        "selectedIconPath": "static/images/tabbar/customer-active.png"
+      },
+      {
+        "pagePath": "pages/search/customer_search",
+        "text": "查询",
+        "iconPath": "static/images/tabbar/search.png",
+        "selectedIconPath": "static/images/tabbar/search-active.png"
+      },
+      {
+        "pagePath": "pages/user/index",
+        "text": "我的",
+        "iconPath": "static/images/tabbar/user.png",
+        "selectedIconPath": "static/images/tabbar/user-active.png"
+      }
+    ]
+  },
+  "usingComponents": {}
+}
