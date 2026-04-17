@@ -44,6 +44,11 @@ export default {
 			Message = this.$route.query.Message;
 			appmc = true;
 		}
+		// 保存 hxCustomerData 到 sessionStorage（在认证前）
+		this.saveParams();
+		// 然后清除URL中的hxCustomerData参数（避免传递到认证服务器）
+		this.clearUrlParams(['hxCustomerData']);
+
 		//判断是否存储Login_token 如果有存储超时10800要重新请求
 		// 开发模式
 		// 7af5c9adaff25ddd0ec5da820cc8a831349b25e6
@@ -64,7 +69,7 @@ export default {
 				let redirectUri = encodeURIComponent(uri);
 				const HREFURL = http_url + '?systemid=' + systemid + '&api_token=' + api_token + '&timestamp=' + dateTime + '&redirect_uri=' + redirectUri;
 				location.href = HREFURL;
-				this.pushStateUrl();
+				// this.pushStateUrl();
 			}
 		} else {
 			//水印
@@ -73,6 +78,38 @@ export default {
 		}
 	},
 	methods: {
+		// 保存参数
+		saveParams() {
+			let url = window.location.href;
+			// 从完整 URL 中提取 hxCustomerData
+			let match = url.match(/hxCustomerData=([^&]+)/);
+			if (match) {
+				console.log('保存hxCustomerData:', match[1]);
+				try {
+					let decoded = decodeURIComponent(match[1]);
+					sessionStorage.setItem('hxCustomerData', decoded);
+				} catch(e) {
+					sessionStorage.setItem('hxCustomerData', match[1]);
+				}
+			}
+		},
+		// 通用的URL参数清理方法
+		clearUrlParams(paramsToRemove = []) {
+			if (paramsToRemove.length > 0) {
+				let url = window.location.href;
+				let [baseUrl, queryString] = url.split('?');
+				if (queryString) {
+					let params = new URLSearchParams(queryString);
+					paramsToRemove.forEach(param => params.delete(param));
+					let newQuery = params.toString();
+					let newUrl = newQuery ? baseUrl + '?' + newQuery : baseUrl;
+					// 真正修改浏览器URL
+					if (newUrl !== url) {
+						window.history.replaceState({}, 0, newUrl);
+					}
+				}
+			}
+		},
 		appMc_hide() {
 			this.appmc = false;
 		},

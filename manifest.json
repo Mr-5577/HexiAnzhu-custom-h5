@@ -1,6 +1,6 @@
 {
     "name" : "customermanagement",
-    "appid" : "__UNI__261131F",
+    "appid" : "__UNI__190B561",
     "description" : "",
     "versionName" : "1.9.3",
     "versionCode" : "100",
@@ -108,7 +108,7 @@
         },
         "router" : {
             "mode" : "hash",
-            "base" : "/custom/"
+            "base" : "/custom-hx/"
         },
         "domain" : "http://voa.hexianzhu.com",
         "optimization" : {

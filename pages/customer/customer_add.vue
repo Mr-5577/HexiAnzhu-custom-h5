@@ -219,7 +219,8 @@ export default {
 			tmp_standardtime: '',
 			customerData: '',
 			project: [], //已经选择的项目
-			sale_pid: '' //选择共享人的项目id
+			sale_pid: '', //选择共享人的项目id
+			hxCustomerObj: null // 卡片跳转传递的参数
 		};
 	},
 	components: {
@@ -241,10 +242,35 @@ export default {
 			this.formData.ctimestr = this.firstTime;
 			this.tmp_standardtime = this.firstTime;
 		}
-		this.GetUser();
-		this.GetBigareacustomapi();
-		this.getQiniuToken();
-		this.GetJtTemplate();
+		/**
+		 * @name hxCustomerData 消息卡片跳转传参，入参格式，字段名以及参数值
+		 * @param custName - 客户姓名，如 "张三"
+		 * @param custTel - 客户电话，如 "13800138000"
+		 * @param custTel2 - 备用电话，如 "13800138000"
+		 * @param jt_typeway - 知晓途径，如 '网络'
+		 * @param jt_pathway - 到访方式，如 '自然到访'
+		 * @param jt_comepeople - 来访人数，如 '3-4人'
+		 * @example hxCustomerData={"custName":"张三","custTel":"13800138000","custTel2":"13800138000","jt_typeway":"网络","jt_pathway":"自然到访","jt_comepeople":"3-4人"}
+		 */
+		let hxCustomerDataStr = sessionStorage.getItem('hxCustomerData');
+		if (hxCustomerDataStr) {
+			try {
+				// 如果是JSON字符串，直接解析
+				if (typeof hxCustomerDataStr === 'string') {
+					this.hxCustomerObj = JSON.parse(hxCustomerDataStr);
+				} else {
+					this.hxCustomerObj = hxCustomerDataStr;
+				}
+			} catch (error) {
+				this.hxCustomerObj = null;
+			}
+		}
+		if(sessionStorage.getItem('Login_token')) {
+			this.GetUser();
+			this.GetBigareacustomapi();
+			this.getQiniuToken();
+			this.GetJtTemplate(true);
+		}
 	},
 	computed: {
 		nowDay() {
@@ -264,6 +290,46 @@ export default {
 	},
 
 	methods: {
+		// 处理参数回显
+		processParameterEcho() {
+			if(!this.hxCustomerObj) return;
+			const { custName, custTel, custTel2, jt_typeway, jt_pathway, jt_comepeople } = this.hxCustomerObj;
+			this.formData.cname = custName || ''
+			this.formData.ctel = custTel || ''
+			this.formData.ctels = custTel2 || ''
+			const templateData = {
+				jt_typeway: jt_typeway || '',
+				jt_pathway: jt_pathway || '',
+				jt_comepeople: this.convertComepeople(jt_comepeople) || ''
+			}
+			for (let key in templateData) {
+				// 获取需要选中的值（字符串）
+				const selectedValue = templateData[key];
+				// 在 JttemplateList 中找到匹配的模板项（通过 inputname 匹配）
+				const templateItem = this.JttemplateList.find(item => item.inputname === key);
+				if (templateItem && templateItem.list && selectedValue) {
+					// 遍历模板项的选项列表，匹配中文名称
+					templateItem.list.forEach((option, idx) => {
+						// 如果选项的中文名称与传入的值完全一致，则设置为选中
+						if (option.name === selectedValue) {
+							option.active = true;
+							option.index = idx;
+						}
+					});
+				}
+			}
+			this.$forceUpdate();
+		},
+		convertComepeople(code) {
+			if (!code) return '';
+			const num = parseInt(code);
+			if (num === 1) return '1人';
+			if (num === 2) return '2人';
+			if (num >= 3 && num <= 4) return '3-4人';
+			if (num >= 5 && num <= 6) return '5-6人';
+			if (num >= 7) return '6人以上';
+			return '';
+		},
 		//有效用户
 		valid() {
 			this.$api.UnallocatedapiValid({ ca_id: this.customerData.ca_id }).then(res => {
@@ -386,7 +452,7 @@ export default {
 			this.list_project_template = keyValue;
 		},
 		//获取集团模板
-		async GetJtTemplate() {
+		async GetJtTemplate(flag) {
 			let data = {
 				pid: 0,
 				type: 1 //1：录入客户模板；2：跟进客户模板
@@ -415,6 +481,12 @@ export default {
 						temp.list.push(datas);
 					});
 					this.JttemplateList.push(temp);
+				}
+				// 获取参数，延迟处理回显数据
+				if (flag) {
+					setTimeout(() => {
+						this.processParameterEcho()
+					}, 300)
 				}
 			});
 		},
@@ -772,6 +844,8 @@ export default {
 					if (this.customerData.ca_id) {
 						this.valid();
 					}
+					// 清除 sessionStorage 中的 hxCustomerData，避免重复使用
+					sessionStorage.removeItem('hxCustomerData');
 					_this.formData = {
 						pid: '',
 						project_template: '', //模板
@@ -803,7 +877,7 @@ export default {
 					_this.project = '';
 					_this.sale_pid = '';
 					 this.GetUser();
-					 this.GetJtTemplate();
+					 this.GetJtTemplate(false);
 				} else {
 					uni.showToast({
 						icon: 'none',
@@ -856,6 +930,10 @@ export default {
 			}
 			this.$forceUpdate();
 		}
+	},
+	beforeDestroy() {
+	    // 清除 sessionStorage 中的 hxCustomerData，避免重复使用
+		sessionStorage.removeItem('hxCustomerData');
 	}
 };
 </script>
