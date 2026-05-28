@@ -220,7 +220,8 @@ export default {
 			customerData: '',
 			project: [], //已经选择的项目
 			sale_pid: '', //选择共享人的项目id
-			hxCustomerObj: null // 卡片跳转传递的参数
+			hxCustomerObj: null, // 卡片跳转传递的参数
+			needEchoProject: false, //是否需要回显项目
 		};
 	},
 	components: {
@@ -228,7 +229,7 @@ export default {
 		sharePerson,
 		wPicker
 	},
-	onLoad(option) {
+	async onLoad(option) {
 		if (option.customerData) {
 			this.customerData = JSON.parse(option.customerData);
 			this.formData.cname = this.customerData.cname;
@@ -250,7 +251,9 @@ export default {
 		 * @param jt_typeway - 知晓途径，如 '网络'
 		 * @param jt_pathway - 到访方式，如 '自然到访'
 		 * @param jt_comepeople - 来访人数，如 '3-4人'
-		 * @example hxCustomerData={"custName":"张三","custTel":"13800138000","custTel2":"13800138000","jt_typeway":"网络","jt_pathway":"自然到访","jt_comepeople":"3-4人"}
+		 * @param projId - 项目ID，如 '123456'
+		 * @param projName - 项目名称，如 '某某项目'
+		 * @example hxCustomerData={"custName":"张三","custTel":"13800138000","custTel2":"13800138000","jt_typeway":"网络","jt_pathway":"自然到访","jt_comepeople":"3-4人","projId":"123456","projName":"某某项目"}
 		 */
 		let hxCustomerDataStr = sessionStorage.getItem('hxCustomerData');
 		if (hxCustomerDataStr) {
@@ -264,10 +267,20 @@ export default {
 			} catch (error) {
 				this.hxCustomerObj = null;
 			}
+			// 有项目信息时，标记需要回显项目
+			if(this.hxCustomerObj && this.hxCustomerObj.projId) {
+				this.needEchoProject = true;
+			}
 		}
 		if(sessionStorage.getItem('Login_token')) {
-			this.GetUser();
-			this.GetBigareacustomapi();
+			await this.GetBigareacustomapi();
+			
+			// 在获取完默认项目后，如果需要回显则覆盖
+			if(this.hxCustomerObj && this.hxCustomerObj.projId && this.needEchoProject) {
+				this.echoProject();
+			} else {
+				this.GetUser();
+			}
 			this.getQiniuToken();
 			this.GetJtTemplate(true);
 		}
@@ -290,6 +303,40 @@ export default {
 	},
 
 	methods: {
+		// 回显项目
+		async echoProject() {
+			const { projId, projName } = this.hxCustomerObj;
+			if(!projId || !projName) return;
+			
+			this.formData.pid = [projId];
+			this.p_name = projName;
+			
+			let obj = {};
+			obj[projId] = { name: projName };
+			this.project = obj;
+			
+			let ChooseProject = [{ p_id: projId, p_name: projName, isactive: true }];
+			this.$store.commit('setDefaultActiveProject', ChooseProject);
+			this.$store.commit('setDefaultPid', projId);
+			
+			// 更新 searchPro 中的选中状态
+			let searchPro = this.$store.state.searchPro;
+			if(searchPro && searchPro.length > 0) {
+				searchPro.forEach(area => {
+					area.project.forEach(project => {
+						project.isactive = (project.p_id == projId);
+					});
+				});
+				this.$store.commit('setSearchPro', [...searchPro]);
+			}
+			
+			let keyValue = {};
+			let template = await this.GetTemplate(projId);
+			keyValue[projId] = template;
+			this.list_project_template = keyValue;
+			this.needEchoProject = false; // 回显完成，标记为 false
+			this.$forceUpdate();
+		},
 		// 处理参数回显
 		processParameterEcho() {
 			if(!this.hxCustomerObj) return;
@@ -497,11 +544,11 @@ export default {
 			this.$tools.isIdCard(e.detail.value);
 		},
 		//根据权限获取大区和大区下的项目
-		GetBigareacustomapi() {
+		async GetBigareacustomapi() {
 			uni.showLoading({
 				title: '正在获取数据...'
 			});
-			this.$api.customGetbigareacustomapi({}, res => {
+			await this.$api.customGetbigareacustomapi({}, res => {
 				res.data.forEach(res => {
 					res.project.forEach(resp => {
 						resp.isactive = false;
