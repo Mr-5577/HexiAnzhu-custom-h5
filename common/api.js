@@ -272,6 +272,10 @@ api.UnallocatedApiWaitVisit = (data) => {
 api.SweepcodeIndex = (data) => {
 	return uniRequest.post('custom-sweepcode_index', data)
 }
+// 获取未关联的来访记录
+api.GetVisitList = (data, header) => {
+	return uniRequest.erpPost('visit/getVisitList', data, header)
+}
 
 
 

@@ -12,6 +12,17 @@
 					<text class="sm text-gray cuIcon-right" style="padding-left: 16upx;"></text>
 				</view>
 			</view>
+			<!-- 从消息卡片进入或者只选择一个项目并且选择的项目的is_use_visit为true时必须关联来访登记 -->
+			<view class="cu-form-group" id="visit" v-if="isFromMessageCard || isSingleProject">
+				<view class="title">
+					来访登记
+					<text class="text-red">*</text>
+				</view>
+				<view class="picker text-cut text-right" style="width: 60%;" @click="chooseVisit">
+					{{ visitName }}
+					<text class="sm text-gray cuIcon-right" style="padding-left: 16upx;"></text>
+				</view>
+			</view>
 			<view class="cu-form-group" id="cname">
 				<view class="title">
 					客户姓名
@@ -158,6 +169,7 @@
 		<li-choose ref="lichoose" :showCustomer="showCustomer" @confirm="Confirms" :isSingle="isSingle"></li-choose>
 		<share-person ref="sharePersons" :sharePerson="groupSaleData" @onShare="OnShares"></share-person>
 		<w-picker mode="time" @confirm="OnConfirm" ref="dateTime" themeColor="#f00"></w-picker>
+		<li-visit-record ref="liVisitRecordRef" :projectId="formData.pid" :visitId="formData.visitId" @confirm="associationConfirm"></li-visit-record>
 	</view>
 </template>
 
@@ -166,6 +178,7 @@ import liChoose from '@/components/li-choose/li-choose.vue';
 import sharePerson from '@/components/share-person/share-person.vue';
 import qiniuUploader from '@/common/qiniuUploader.js';
 import wPicker from '@/components/w-picker/w-picker.vue';
+import liVisitRecord from '@/components/li-visit-record/li-visit-record.vue';
 export default {
 	data() {
 		return {
@@ -178,7 +191,6 @@ export default {
 			customerBuyHousePurpose: [],
 			modalName: null,
 			imgList: [],
-			pid: '', //项目id
 			showCustomer: false,
 			isSingle: false, //选择项目是否是单选
 			p_name: '请选择项目', //选择项目
@@ -188,7 +200,7 @@ export default {
 			sharePersons: '请选择共享人',
 			qiniuDatas: '', //七牛云token
 			formData: {
-				pid: '',
+				pid: [],
 				project_template: '', //模板
 				source_type: 0, //客户来源（1-自然到访，2-渠道）
 				visit_type: '', //到访情况 (1:面谈，2：非面谈)
@@ -209,7 +221,10 @@ export default {
 				photo: '', //	否	array	客户照片
 				tmp_id: '', //否	string	关联人脸信息id
 				base_project_template: '', //集团模板
-				list_project_template: '' //项目模板
+				list_project_template: '', //项目模板
+				oppId: '', //机会id
+				cstId: '', //客户id
+				visitId: '', //来访登记id
 			},
 			firstTime: '',
 			JttemplateList: [],
@@ -222,12 +237,15 @@ export default {
 			sale_pid: '', //选择共享人的项目id
 			hxCustomerObj: null, // 卡片跳转传递的参数
 			needEchoProject: false, //是否需要回显项目
+			visitName: '请关联来访登记', //来访登记名称
+			selectedProjectData: null, //选择的项目数据
 		};
 	},
 	components: {
 		liChoose,
 		sharePerson,
-		wPicker
+		wPicker,
+		liVisitRecord,
 	},
 	async onLoad(option) {
 		if (option.customerData) {
@@ -253,7 +271,15 @@ export default {
 		 * @param jt_comepeople - 来访人数，如 '3-4人'
 		 * @param projId - 项目ID，如 '123456'
 		 * @param projName - 项目名称，如 '某某项目'
+		 * @param oppId - 机会ID
+		 * @param cstId - 客户ID
+		 * @param visitId - 来访登记ID
 		 * @example hxCustomerData={"custName":"张三","custTel":"13800138000","custTel2":"13800138000","jt_typeway":"网络","jt_pathway":"自然到访","jt_comepeople":"3-4人","projId":"123456","projName":"某某项目"}
+		 */
+		/**
+		 * hxCustomerData新增三个字段：oppId、cstId、visitId，一共两种情况：
+		 * 一：当从消息卡片进入时会从hxCustomerData数据里面取出相关字段进行回显，并且不可筛选项目。可以切换关联来访登记数据，切换关联来访登记数据时需要更新相关字段，
+		 * 二：直接进入页面时，可以筛选项目。但是因为项目是多选的，所以当只选择一个项目并且选择项目内的is_use_visit为true时，才允许选择关联来访数据。否则不显示关联来访登记，保存也不用校验是否选择了关联来访数据
 		 */
 		let hxCustomerDataStr = sessionStorage.getItem('hxCustomerData');
 		if (hxCustomerDataStr) {
@@ -268,18 +294,31 @@ export default {
 				this.hxCustomerObj = null;
 			}
 			// 有项目信息时，标记需要回显项目
-			if(this.hxCustomerObj && this.hxCustomerObj.projId) {
+			if (this.hxCustomerObj && this.hxCustomerObj.projId) {
 				this.needEchoProject = true;
 			}
 		}
-		if(sessionStorage.getItem('Login_token')) {
+		if (sessionStorage.getItem('Login_token')) {
 			await this.GetBigareacustomapi();
-			
+
 			// 在获取完默认项目后，如果需要回显则覆盖
-			if(this.hxCustomerObj && this.hxCustomerObj.projId && this.needEchoProject) {
+			if (this.hxCustomerObj && this.hxCustomerObj.projId && this.needEchoProject) {
 				this.echoProject();
 			} else {
-				this.GetUser();
+				await this.GetUser();
+				// 通过获取的详情信息拿到当前用户的默认项目数据,并回显到页面
+				setTimeout(() => {
+				    const pid = this.$store.state.default_pid; // 获取默认项目ID
+					const projList = this.$store.state.searchPro; // 获取大区项目列表
+					const targetData = projList?.flatMap(area => area.project || [])?.find(project => project.p_id == pid) || null
+					if (targetData) {
+						const objData = {
+							pid: [pid],
+							projects: [targetData]
+						}
+						this.selectedProjectData = JSON.parse(JSON.stringify(objData));
+					}
+				}, 1000)
 			}
 			this.getQiniuToken();
 			this.GetJtTemplate(true);
@@ -299,29 +338,42 @@ export default {
 		},
 		headBaseName() {
 			return this.$store.state.uploadQiNiuName;
-		}
+		},
+		// 是否从消息卡片进入
+		isFromMessageCard() {
+			return !!this.hxCustomerObj;
+		},
+		// 是否只选中一个项目并且is_use_visit为true
+		isSingleProject() {
+			if (!this.selectedProjectData) return false;
+			const projects = this.selectedProjectData.projects;
+			if (projects && projects.length === 1) {
+				// 只有当 is_use_visit 为 true 时才显示来访登记
+				return !!projects[0].is_use_visit;
+			}
+			return false;
+		},
 	},
 
 	methods: {
 		// 回显项目
 		async echoProject() {
 			const { projId, projName } = this.hxCustomerObj;
-			if(!projId || !projName) return;
-			
+			if (!projId) return;
 			this.formData.pid = [projId];
-			this.p_name = projName;
+			this.p_name = projName || '';
 			
 			let obj = {};
-			obj[projId] = { name: projName };
+			obj[projId] = { name: projName || '' };
 			this.project = obj;
 			
-			let ChooseProject = [{ p_id: projId, p_name: projName, isactive: true }];
+			let ChooseProject = [{ p_id: projId, p_name: projName || '', isactive: true }];
 			this.$store.commit('setDefaultActiveProject', ChooseProject);
 			this.$store.commit('setDefaultPid', projId);
 			
 			// 更新 searchPro 中的选中状态
 			let searchPro = this.$store.state.searchPro;
-			if(searchPro && searchPro.length > 0) {
+			if (searchPro && searchPro.length > 0) {
 				searchPro.forEach(area => {
 					area.project.forEach(project => {
 						project.isactive = (project.p_id == projId);
@@ -334,16 +386,20 @@ export default {
 			let template = await this.GetTemplate(projId);
 			keyValue[projId] = template;
 			this.list_project_template = keyValue;
-			this.needEchoProject = false; // 回显完成，标记为 false
+			// this.needEchoProject = false; // 回显完成，标记为 false
 			this.$forceUpdate();
 		},
 		// 处理参数回显
 		processParameterEcho() {
-			if(!this.hxCustomerObj) return;
-			const { custName, custTel, custTel2, jt_typeway, jt_pathway, jt_comepeople } = this.hxCustomerObj;
+			if (!this.hxCustomerObj) return;
+			const { custName, custTel, custTel2, jt_typeway, jt_pathway, jt_comepeople, oppId, cstId, visitId } = this.hxCustomerObj;
 			this.formData.cname = custName || ''
 			this.formData.ctel = custTel || ''
 			this.formData.ctels = custTel2 || ''
+			this.formData.oppId = oppId || ''
+			this.formData.cstId = cstId || ''
+			this.formData.visitId = visitId || ''
+			this.visitName = `${custName}-${custTel}-来访记录` // 来访登记名称
 			const templateData = {
 				jt_typeway: jt_typeway || '',
 				jt_pathway: jt_pathway || '',
@@ -568,14 +624,24 @@ export default {
 			this.formData.ctimestr = this.firstTime;
 		},
 		chooseProject() {
+			// 从消息卡片进入时不允许切换项目
+			if (this.isFromMessageCard) return;
 			this.$refs.lichoose.show();
 		},
 		//选择项目之后
 		async Confirms(res) {
-			if (res.pid) {
+			console.log('res',res);
+			this.selectedProjectData = JSON.parse(JSON.stringify(res));
+			if (res.pid && res.pid.length > 0) {
 				let obj = {};
 				let keyValue = {};
 				this.formData.pid = res.pid;
+				// 清除之前选择的关联来访数据
+				this.formData.oppId = '';
+				this.formData.cstId = '';
+				this.formData.visitId = '';
+				this.visitName = '请关联来访登记';
+
 				for (let i = 0; i < res.pid.length; i++) {
 					let key = res.pid[i];
 					let template = await this.GetTemplate(key);
@@ -720,6 +786,16 @@ export default {
 				});
 				document.getElementById('project').scrollIntoView(true);
 				return;
+			}
+			if (this.isFromMessageCard || this.isSingleProject) {
+				if (!this.formData.visitId) {
+					uni.showToast({
+						icon: 'none',
+						title: '请关联来访登记'
+					});
+					document.getElementById('visit').scrollIntoView(true);
+					return;
+				}
 			}
 			if (!this.formData.cname) {
 				uni.showToast({
@@ -892,6 +968,9 @@ export default {
 						this.valid();
 					}
 					// 清除 sessionStorage 中的 hxCustomerData，避免重复使用
+					_this.hxCustomerObj = null;
+					_this.needEchoProject = false;
+					_this.selectedProjectData = null;
 					sessionStorage.removeItem('hxCustomerData');
 					_this.formData = {
 						pid: '',
@@ -915,7 +994,10 @@ export default {
 						photo: '', //	否	array	客户照片
 						tmp_id: '', //否	string	关联人脸信息id
 						list_project_template: '', //项目
-						base_project_template: '' //集团
+						base_project_template: '', //集团
+						oppId: '', // 机会id
+						cstId: '', // 客户id
+						visitId: '', // 来访记录id
 					};
 					_this.list_project_template = '';
 					_this.imgList = '';
@@ -923,8 +1005,9 @@ export default {
 					_this.sharePersons = '';
 					_this.project = '';
 					_this.sale_pid = '';
-					 this.GetUser();
-					 this.GetJtTemplate(false);
+					_this.visitName = '请关联来访登记';
+					_this.GetUser();
+					_this.GetJtTemplate(false);
 				} else {
 					uni.showToast({
 						icon: 'none',
@@ -976,10 +1059,25 @@ export default {
 				this.project[this.sale_pid].salesId = this.$tools.toStrings(ids);
 			}
 			this.$forceUpdate();
+		},
+		chooseVisit() {
+			this.$refs.liVisitRecordRef.show();
+		},
+		// 关联确认
+		associationConfirm(data) {
+			if (data) {
+				this.formData.oppId = data.myOppId || ''
+				this.formData.cstId = data.myCstId || ''
+				this.formData.visitId = data.id || ''
+				this.visitName = `${data.custName}-${data.custTel}-来访记录` // 来访登记名称
+			}
 		}
 	},
 	beforeDestroy() {
-	    // 清除 sessionStorage 中的 hxCustomerData，避免重复使用
+		// 清除 sessionStorage 中的 hxCustomerData，避免重复使用
+		this.hxCustomerObj = null;
+		this.needEchoProject = false;
+		this.selectedProjectData = null;
 		sessionStorage.removeItem('hxCustomerData');
 	}
 };

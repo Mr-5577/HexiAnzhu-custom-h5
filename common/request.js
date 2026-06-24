@@ -2,6 +2,7 @@ import md5 from 'js-md5';
 import store from '@/store/index.js';
 
 const baseUrl = store.state.baseUrl;
+const erpBaseUrl = store.state.erpBaseUrl;
 let requests = {}
 
 function showToast(title) {
@@ -102,7 +103,7 @@ requests.post = (url, data) => {
 	objData = Object.assign(data, {
 		rule_key: ruleKey
 	});
-	
+	// 本地联调时在url后加上?XDEBUG_SESSION=PHPSTORM，url: baseUrl + url + '?XDEBUG_SESSION=PHPSTORM',
 	let promise = new Promise(function(resolve, reject) {
 		uni.request({
 			url: baseUrl + url,
@@ -125,5 +126,49 @@ requests.post = (url, data) => {
 	})
 	return promise
 }
+// 请求erp数据库接口使用
+requests.erpPost = (url, data = {}, header = {}) => {
+  // 获取公共参数
+  const loginToken = sessionStorage.getItem('Login_token');
+  const timestamp = Math.floor(Date.now() / 1000); // 秒级时间戳
+  // 构建公共参数
+  const publicData = {
+    scope: store.state.scope,
+    timestamp,
+    ...(loginToken && { login_token: loginToken })
+  };
+  // 合并参数
+  const requestData = {
+    ...data,
+    ...publicData
+  };
+  // 生成签名
+  const ruleKey = rule_key(requestData);
+  // 最终请求参数
+  const finalData = {
+    ...requestData,
+    rule_key: ruleKey
+  };
+  // 返回 Promise
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: erpBaseUrl + url,
+      data: finalData,
+      method: "POST",
+      header: {
+        'Content-Type': 'application/json',
+        ...header
+      },
+      success: (res) => {
+        uni.hideLoading();
+        resolve(res.data);
+      },
+      fail: (err) => {
+        uni.hideLoading();
+        reject(err);
+      }
+    });
+  });
+};
 
 export default requests;

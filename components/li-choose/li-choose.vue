@@ -304,7 +304,8 @@ export default {
 						pids.push(resp.p_id);
 						let data ={
 							id:resp.p_id,
-							name:resp.p_name
+							name:resp.p_name,
+							is_use_visit:resp.is_use_visit,
 						}
 						projects.push(data);
 					}

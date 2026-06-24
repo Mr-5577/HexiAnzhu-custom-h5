@@ -44,16 +44,16 @@ export default {
 			Message = this.$route.query.Message;
 			appmc = true;
 		}
-		// 保存 hxCustomerData 到 sessionStorage（在认证前）
+		// 保存 hxCustomerData （在认证前）
 		this.saveParams();
 		// 然后清除URL中的hxCustomerData参数（避免传递到认证服务器）
 		this.clearUrlParams(['hxCustomerData']);
 
 		//判断是否存储Login_token 如果有存储超时10800要重新请求
 		// 开发模式
-		// 7af5c9adaff25ddd0ec5da820cc8a831349b25e6
-		// a4ac2cc8dd96c48572d0ed241ea7fa5e471b86b9
-		// sessionStorage.setItem('Login_token','202fb571e5b5d8a53de48015a985ec2e8afc64b3')
+		// 202fb571e5b5d8a53de48015a985ec2e8afc64b3
+		// a1d100a58584e58a1bd1cb489e2120af4beb0ffd
+		// sessionStorage.setItem('Login_token','a1d100a58584e58a1bd1cb489e2120af4beb0ffd')
 		//判断是否存储Login_token 如果有存储超时10800要重新请求
 		if (!sessionStorage.getItem('Login_token')) {
 			let u_str = decodeURIComponent(location.href);

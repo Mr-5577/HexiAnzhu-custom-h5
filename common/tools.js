@@ -1,3 +1,4 @@
+import CryptoJS from 'crypto-js';
 var tools = new Object();
 //对象转为字符串
 tools.toStrings = (arrayData) => {
@@ -231,5 +232,15 @@ tools.compressPic = (url) => {
 		};
 	})
 }
+/**
+ * HMAC-SHA1 加密
+ * @param message 要加密的消息
+ * @param secret 密钥
+ * @returns 十六进制字符串
+ */
+tools.hmacSha1 = (message, secret) => {
+  if (!message || !secret) return '';
+  return CryptoJS.HmacSHA1(message, secret).toString();
+};
 
 export default tools;

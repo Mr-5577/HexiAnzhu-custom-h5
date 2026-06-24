@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "crypto-js": "^4.2.0",
     "echarts": "^4.9.0",
     "js-md5": "^0.7.3"
   }

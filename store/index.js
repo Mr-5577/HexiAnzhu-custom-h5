@@ -8,7 +8,10 @@ const store = new Vuex.Store({
         scope:'weixin',//权限范围
 		applic:'custom',//授权认证token
 		// baseUrl:'http://192.168.10.179/',
-		baseUrl:'http://woa.hexianzhu.com/',
+		baseUrl:'http://woa.hexianzhu.com/', // 正式环境
+		// baseUrl:'http://192.168.1.200:8083/', // 本地环境
+		// erpBaseUrl:'http://192.168.1.200:8091/', // 本地环境
+		erpBaseUrl:'http://sys.hexianzhu.com/api/', // 正式环境
 		qiniuData: '', //服务端七牛云数据
 		accessTokens:{},//
 		searchPro:[],
