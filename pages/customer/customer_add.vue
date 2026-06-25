@@ -222,9 +222,10 @@ export default {
 				tmp_id: '', //否	string	关联人脸信息id
 				base_project_template: '', //集团模板
 				list_project_template: '', //项目模板
-				oppId: '', //机会id
-				cstId: '', //客户id
+				myOppId: '', //机会id
+				myCstId: '', //客户id
 				visitId: '', //来访登记id
+				myUserId: '', //置业顾问id
 			},
 			firstTime: '',
 			JttemplateList: [],
@@ -271,9 +272,10 @@ export default {
 		 * @param jt_comepeople - 来访人数，如 '3-4人'
 		 * @param projId - 项目ID，如 '123456'
 		 * @param projName - 项目名称，如 '某某项目'
-		 * @param oppId - 机会ID
-		 * @param cstId - 客户ID
+		 * @param myOppId - 机会ID
+		 * @param myCstId - 客户ID
 		 * @param visitId - 来访登记ID
+		 * @param myUserId - 置业顾问ID
 		 * @example hxCustomerData={"custName":"张三","custTel":"13800138000","custTel2":"13800138000","jt_typeway":"网络","jt_pathway":"自然到访","jt_comepeople":"3-4人","projId":"123456","projName":"某某项目"}
 		 */
 		/**
@@ -392,13 +394,14 @@ export default {
 		// 处理参数回显
 		processParameterEcho() {
 			if (!this.hxCustomerObj) return;
-			const { custName, custTel, custTel2, jt_typeway, jt_pathway, jt_comepeople, oppId, cstId, visitId } = this.hxCustomerObj;
+			const { custName, custTel, custTel2, jt_typeway, jt_pathway, jt_comepeople, myOppId, myCstId, visitId,myUserId } = this.hxCustomerObj;
 			this.formData.cname = custName || ''
 			this.formData.ctel = custTel || ''
 			this.formData.ctels = custTel2 || ''
-			this.formData.oppId = oppId || ''
-			this.formData.cstId = cstId || ''
+			this.formData.myOppId = myOppId || ''
+			this.formData.myCstId = myCstId || ''
 			this.formData.visitId = visitId || ''
+			this.formData.myUserId = myUserId || ''
 			this.visitName = `${custName}-${custTel}-来访记录` // 来访登记名称
 			const templateData = {
 				jt_typeway: jt_typeway || '',
@@ -637,9 +640,10 @@ export default {
 				let keyValue = {};
 				this.formData.pid = res.pid;
 				// 清除之前选择的关联来访数据
-				this.formData.oppId = '';
-				this.formData.cstId = '';
+				this.formData.myOppId = '';
+				this.formData.myCstId = '';
 				this.formData.visitId = '';
+				this.formData.myUserId = '';
 				this.visitName = '请关联来访登记';
 
 				for (let i = 0; i < res.pid.length; i++) {
@@ -995,9 +999,10 @@ export default {
 						tmp_id: '', //否	string	关联人脸信息id
 						list_project_template: '', //项目
 						base_project_template: '', //集团
-						oppId: '', // 机会id
-						cstId: '', // 客户id
+						myOppId: '', // 机会id
+						myCstId: '', // 客户id
 						visitId: '', // 来访记录id
+						myUserId: '', // 置业顾问id
 					};
 					_this.list_project_template = '';
 					_this.imgList = '';
@@ -1066,9 +1071,10 @@ export default {
 		// 关联确认
 		associationConfirm(data) {
 			if (data) {
-				this.formData.oppId = data.myOppId || ''
-				this.formData.cstId = data.myCstId || ''
+				this.formData.myOppId = data.myOppId || ''
+				this.formData.myCstId = data.myCstId || ''
 				this.formData.visitId = data.id || ''
+				this.formData.myUserId = data.myUserId || ''
 				this.visitName = `${data.custName}-${data.custTel}-来访记录` // 来访登记名称
 			}
 		}
